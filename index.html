@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thump Test: Watermelon Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --rind:#123d24;      /* deep rind, also our ink */
+    --stripe:#4f8a3a;    /* rind stripe */
+    --pith:#f1f8e6;      /* pale white-green layer under the rind: page background */
+    --flesh:#ff4d6a;     /* melon pink */
+    --flesh-deep:#d62f4e;
+    --blush:#ffe3e8;
+    --field:#f4c84a;     /* the yellow field spot: used for warnings */
+    --muted:#557061;
+    --line:#d5e6c6;
+    --display:"Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --body:"Figtree", system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:var(--body);font-size:16px;line-height:1.5;color:var(--rind);background:var(--pith)}
+  main{max-width:560px;margin:0 auto;padding:0 18px 48px}
+  :focus-visible{outline:3px solid var(--flesh);outline-offset:2px;border-radius:6px}
+
+  /* ---- Hero: the slice ---- */
+  .hero{position:relative;text-align:center;padding:28px 0 6px}
+  .hero h1{font-family:var(--display);font-weight:400;font-size:clamp(3rem,15vw,4.6rem);line-height:.9;margin:0;color:var(--rind);letter-spacing:-.01em}
+  .hero p{max-width:30ch;margin:12px auto 0;color:var(--muted);font-size:1.02rem}
+  .slice{display:block;width:min(100%,420px);margin:22px auto 0;overflow:visible}
+  @media (prefers-reduced-motion:no-preference){
+    .slice.bounce{animation:bounce .7s cubic-bezier(.3,1.6,.5,1)}
+    @keyframes bounce{0%{transform:translateY(0)}30%{transform:translateY(-10px) rotate(-2deg)}100%{transform:none}}
+  }
+
+  /* ---- Add form ---- */
+  .add{display:grid;grid-template-columns:1fr auto;gap:8px;margin:26px 0 6px}
+  .add .weight{display:flex;gap:0;border:2px solid var(--rind);border-radius:14px;overflow:hidden;background:#fff}
+  .add input,.add select{font:inherit;border:0;background:transparent;color:var(--rind);padding:12px 12px;min-width:0}
+  .add input::placeholder{color:#89a091}
+  .add .name{grid-column:1/-1;border:2px solid var(--rind);border-radius:14px;background:#fff}
+  .add .weight input{width:100%}
+  .add select{border-left:2px solid var(--line);padding-right:6px}
+  .hint{font-size:.88rem;color:var(--muted);margin:6px 2px 0}
+  .note{background:#fff7da;border-left:4px solid var(--field);border-radius:8px;padding:10px 12px;font-size:.9rem;margin-top:12px;display:none}
+
+  button{font:inherit;font-weight:700;cursor:pointer;border-radius:999px;border:2px solid var(--rind);padding:11px 18px;background:var(--rind);color:#fff;transition:transform .08s}
+  button:active{transform:scale(.97)}
+  button.ghost{background:transparent;color:var(--rind)}
+  button.go{background:var(--flesh);border-color:var(--flesh);color:#fff}
+  button.go.live{background:var(--flesh-deep);border-color:var(--flesh-deep)}
+  button:disabled{opacity:.55;cursor:default}
+  .x{border:0;background:transparent;color:var(--muted);padding:6px 10px;font-size:1.2rem;line-height:1}
+
+  /* ---- Melon rows ---- */
+  h2{font-family:var(--display);font-weight:400;font-size:1.9rem;margin:34px 0 10px}
+  .melon{display:grid;grid-template-columns:76px 1fr auto;gap:14px;align-items:center;padding:16px 0;border-top:2px dashed var(--line)}
+  .melon:first-of-type{border-top:0}
+  .badge{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;text-align:center;
+    background:repeating-linear-gradient(100deg,var(--rind) 0 9px,var(--stripe) 9px 16px);color:#fff;position:relative}
+  .badge::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--rind);opacity:.82}
+  .badge span{position:relative;z-index:1;font-family:var(--display);font-size:1.35rem;line-height:1}
+  .badge small{display:block;font-family:var(--body);font-weight:600;font-size:.7rem;opacity:.85;margin-top:2px}
+  .melon.best .badge::after{background:var(--flesh);opacity:1}
+  .info b{font-size:1.08rem}
+  .meta{color:var(--muted);font-size:.88rem}
+  .status{font-size:.88rem;margin-top:4px;color:var(--muted)}
+  .status.warn{color:#9a6a00}
+  .actions{grid-column:2/-1;display:flex;gap:8px;flex-wrap:wrap}
+  .detail{grid-column:1/-1;display:none}
+  .melon.has .detail{display:block}
+  .readout{display:flex;gap:18px;font-size:.9rem;color:var(--muted)}
+  .readout b{color:var(--rind);font-size:1rem}
+  canvas{display:block;width:100%;height:70px;margin-top:8px}
+  .pill{display:inline-block;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--line);color:var(--rind);margin-left:6px;vertical-align:2px}
+  .pill.best{background:var(--flesh);color:#fff}
+  .pill.warn{background:#fff1c2;color:#8a5d00}
+
+  /* ---- Verdict ---- */
+  .verdict{margin-top:30px;background:var(--rind);color:#fff;border-radius:28px 28px 140px 140px / 28px 28px 90px 90px;padding:24px 10px 10px;text-align:center}
+  .verdict .lead{font-size:.95rem;opacity:.85;margin:0}
+  .verdict .pick{font-family:var(--display);font-size:clamp(2.1rem,10vw,3rem);line-height:1.02;margin:6px 14px 20px;overflow-wrap:anywhere}
+  .verdict .flesh{background:var(--flesh-deep);border-top:8px solid var(--pith);border-radius:0 0 130px 130px / 0 0 80px 80px;padding:14px 22px 44px}
+  .verdict ol{list-style:none;padding:0;margin:0 auto;max-width:380px;text-align:left}
+  .verdict li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.35);font-size:.95rem}
+  .verdict li:last-child{border-bottom:0}
+  .verdict li .r{font-weight:700;white-space:nowrap}
+  .verdict .foot{font-size:.82rem;opacity:.95;max-width:34ch;margin:14px auto 0}
+  .verdict.empty{background:transparent;color:var(--muted);border:2px dashed var(--line);border-radius:24px;padding:22px}
+  
+  /* ---- Guide ---- */
+  details{border-top:2px dashed var(--line);padding:14px 0}
+  details:last-of-type{border-bottom:2px dashed var(--line)}
+  summary{cursor:pointer;font-weight:700;font-size:1.05rem;list-style:none;display:flex;justify-content:space-between}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-family:var(--display);font-size:1.3rem;line-height:1;color:var(--flesh)}
+  details[open] summary::after{content:"–"}
+  details p,details li{font-size:.94rem;color:#2c4a37;max-width:60ch}
+  details ul{padding-left:18px;margin:10px 0 0}
+  details li{margin:5px 0}
+  .link{background:none;border:0;padding:0;color:var(--flesh-deep);font-weight:600;font-size:inherit;text-decoration:underline;text-underline-offset:2px;border-radius:4px}
+  .wedit{display:flex;gap:6px;margin-top:4px;align-items:center}
+  .wedit input,.wedit select{font:inherit;font-size:.9rem;border:2px solid var(--rind);border-radius:10px;padding:5px 8px;background:#fff;color:var(--rind);width:80px}
+  .wedit select{width:auto}
+  .wedit button{padding:5px 12px;font-size:.88rem}
+  .rate{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:.9rem;color:var(--muted)}
+  .stars{display:flex}
+  .stars button{background:none;border:0;padding:2px 3px;font-size:1.5rem;line-height:1;color:#b5cfa1;font-weight:400}
+  .stars button.on{color:var(--flesh)}
+  .h2row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .h2row .link{font-size:.9rem}
+  .demo{margin-top:16px;padding:8px 16px;font-size:.92rem}
+  .log{margin-top:6px}
+  .log .sweet{background:#fff;border:2px solid var(--rind);border-radius:18px;padding:14px 16px;margin:8px 0 12px}
+  .log .sweet b{font-family:var(--display);font-weight:400;font-size:1.5rem;display:block;line-height:1.1}
+  .log ul{list-style:none;padding:0;margin:0}
+  .log li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:2px dashed var(--line);font-size:.92rem}
+  .log li .st{color:var(--flesh);letter-spacing:1px;white-space:nowrap}
+  .verdict .match{font-size:.92rem;margin:-8px 14px 18px;opacity:.95}
+  .private{text-align:center;color:var(--muted);font-size:.85rem;margin-top:26px}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>Thump<br>Test</h1>
+    <p>Knock on a few watermelons. Your phone listens and tells you which one to take home.</p>
+    <button class="ghost demo" id="demoBtn" type="button">Try it with demo melons</button>
+    <svg class="slice" id="slice" viewBox="0 0 400 210" aria-hidden="true">
+      <path d="M8 10 A192 192 0 0 0 392 10 Z" fill="#123d24"/>
+      <path d="M22 10 A178 178 0 0 0 378 10 Z" fill="#4f8a3a"/>
+      <path d="M30 10 A170 170 0 0 0 370 10 Z" fill="#f1f8e6"/>
+      <path d="M42 10 A158 158 0 0 0 358 10 Z" fill="#ff4d6a"/>
+      <g fill="#123d24">
+        <ellipse class="seed" cx="120" cy="52" rx="5" ry="9" transform="rotate(-20 120 52)"/>
+        <ellipse class="seed" cx="200" cy="44" rx="5" ry="9"/>
+        <ellipse class="seed" cx="280" cy="52" rx="5" ry="9" transform="rotate(20 280 52)"/>
+        <ellipse class="seed" cx="160" cy="100" rx="5" ry="9" transform="rotate(-10 160 100)"/>
+        <ellipse class="seed" cx="240" cy="100" rx="5" ry="9" transform="rotate(10 240 100)"/>
+        <ellipse class="seed" cx="200" cy="145" rx="5" ry="9"/>
+        <ellipse class="seed" cx="90" cy="20" rx="4" ry="8" transform="rotate(-35 90 20)"/>
+        <ellipse class="seed" cx="310" cy="20" rx="4" ry="8" transform="rotate(35 310 20)"/>
+      </g>
+    </svg>
+  </section>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <input class="name" id="newName" type="text" placeholder="Name it, like “big one on the left”" aria-label="Melon name">
+    <div class="weight">
+      <input id="newWeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Weight (optional)" aria-label="Weight">
+      <select id="unit" aria-label="Weight unit"><option value="lb">lb</option><option value="kg">kg</option></select>
+    </div>
+    <button type="submit">Add melon</button>
+  </form>
+  <p class="hint">Add the weight from the produce scale if you can. Big melons sound lower naturally, so weight keeps the comparison fair.</p>
+  <p class="note" id="micNote"></p>
+
+  <div class="h2row"><h2>Your melons</h2><button class="link" id="newTrip" type="button">Start over</button></div>
+  <div id="melons"></div>
+
+  <div class="verdict empty" id="verdict"></div>
+
+  <h2>Your taste log</h2>
+  <section class="log" id="log"></section>
+
+  <h2>Before you thump</h2>
+  <details open>
+    <summary>How to thump</summary>
+    <ul>
+      <li>Set the melon on the cart or cradle it in one arm. Use the same setup for every melon.</li>
+      <li>Hold your phone about 4 inches from the rind.</li>
+      <li>Knock firmly with a knuckle 3–5 times, about half a second apart, at the middle of the melon.</li>
+      <li>Step away from freezers and speakers if you can. Background noise blurs the reading.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>How it works</summary>
+    <p>Each knock makes the melon ring at its own resonant pitch. As a watermelon ripens, its flesh softens and that pitch drops. The app finds every knock in your recording, measures the strongest tone and how long it rings, and takes the middle value across your knocks.</p>
+    <p>With weights, it ranks by a stiffness index (pitch² × mass^⅔) that agricultural researchers use, so size doesn't skew the result. A melon that sounds very deep but goes dead almost instantly can be past its prime, so the app flags it instead of picking it.</p>
+    <p>It compares the melons in front of you. It can't promise one is sweet on its own.</p>
+  </details>
+  <details>
+    <summary>Check with your eyes too</summary>
+    <ul>
+      <li>A creamy yellow field spot (where it sat on the ground) is good. White means it was picked early.</li>
+      <li>It should feel heavy for its size.</li>
+      <li>A dull rind beats a shiny one, and brown webbing scars often mean extra sugar.</li>
+    </ul>
+  </details>
+  <p class="private">Recordings are analyzed on your phone and never leave it.</p>
+</main>
+
+<input id="fileInput" type="file" accept="audio/*,video/*" hidden>
+
+<script>
+(() => {
+  const RECORD_SECONDS = 4;
+  const F_MIN = 60, F_MAX = 400;
+  let melons = [];
+  let nextId = 1;
+  let audioCtx = null;
+  let pendingUploadId = null;
+  let lastBest = null;
+
+  const $ = s => document.querySelector(s);
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  };
+  let tasteLog = store.get('thump.log', []);
+  let clearArmed = false;
+  const stiff = (f, kg) => f * f * Math.pow(kg, 2 / 3) / 1000;
+  function save(){
+    store.set('thump.session', { nextId, melons: melons.map(m => ({ id: m.id, name: m.name, weight: m.weight, unit: m.unit, result: m.result, status: m.result ? m.status : '', warn: m.result ? m.warn : false, busy: false, rating: m.rating || 0, logId: m.logId || null, demo: !!m.demo })) });
+  }
+  const melonsEl = $('#melons');
+
+  let micAllowed = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  try {
+    if (document.featurePolicy && !document.featurePolicy.allowsFeature('microphone')) micAllowed = false;
+    if (document.permissionsPolicy && !document.permissionsPolicy.allowsFeature('microphone')) micAllowed = false;
+  } catch(e){}
+  function showMicNote(){
+    const n = $('#micNote');
+    n.style.display = 'block';
+    n.textContent = "Live listening isn't available in this view. Record a short video or voice memo of your knocks, then tap Upload.";
+  }
+  if (!micAllowed) showMicNote();
+
+  function getCtx(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function newMelon(name, weight, unit){
+    return { id: nextId++, name, weight, unit, result: null, status: '', warn: false, busy: false };
+  }
+  $('#addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('#newName').value.trim() || `Melon ${String.fromCharCode(64 + nextId)}`;
+    const w = parseFloat($('#newWeight').value);
+    melons.push(newMelon(name, isFinite(w) && w > 0 ? w : null, $('#unit').value));
+    $('#newName').value = ''; $('#newWeight').value = '';
+    render();
+  });
+
+  function massKg(m){ if (!m.weight) return null; return m.unit === 'lb' ? m.weight * 0.453592 : m.weight; }
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function render(){
+    melonsEl.innerHTML = '';
+    if (!melons.length) melonsEl.innerHTML = '<p class="hint">Add a melon above to start.</p>';
+    melons.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'melon' + (m.result ? ' has' : '');
+      const wTxt = m.weight ? `${m.weight} ${m.unit}` : 'No weight';
+      const recLabel = m.busy ? 'Listening…' : (m.result ? 'Listen again' : 'Listen');
+      row.innerHTML = `
+        <div class="badge">${m.result ? `<span>${m.result.freq.toFixed(0)}<small>Hz</small></span>` : '<span>?</span>'}</div>
+        <div class="info">
+          <b>${esc(m.name)}</b><span data-tag></span>
+          <div class="meta" data-meta>${m.weight ? `${wTxt} <button class="link" data-act="w">edit</button>` : `<button class="link" data-act="w">Add weight</button>`}</div>
+          <div class="status ${m.warn ? 'warn' : ''}">${esc(m.status)}</div>
+        </div>
+        <button class="x" data-act="del" aria-label="Remove ${esc(m.name)}">×</button>
+        <div class="actions">
+          ${micAllowed ? `<button class="go ${m.busy ? 'live' : ''}" data-act="rec" ${m.busy ? 'disabled' : ''}>${recLabel}</button>` : ''}
+          <button class="${micAllowed ? 'ghost' : 'go'}" data-act="up" ${m.busy ? 'disabled' : ''}>Upload</button>
+        </div>
+        <div class="detail">
+          ${m.result ? `<div class="readout"><span>Rings for <b>${(m.result.decay * 1000).toFixed(0)} ms</b></span><span><b>${m.result.thumps}</b> knocks heard</span></div><canvas data-canvas></canvas>
+          ${m.demo ? '' : `<div class="rate"><span>${m.rating ? 'Your rating' : 'Ate it? Rate it'}</span><div class="stars">${[1,2,3,4,5].map(n => `<button data-star="${n}" class="${m.rating >= n ? 'on' : ''}" aria-label="${n} out of 5">★</button>`).join('')}</div></div>`}` : ''}
+        </div>`;
+      row.querySelector('[data-act="del"]').onclick = () => { melons = melons.filter(x => x.id !== m.id); render(); };
+      const rb = row.querySelector('[data-act="rec"]'); if (rb) rb.onclick = () => recordMic(m);
+      row.querySelector('[data-act="w"]').onclick = () => editWeight(m, row);
+      row.querySelectorAll('[data-star]').forEach(b => b.onclick = () => rate(m, +b.dataset.star));
+      row.querySelector('[data-act="up"]').onclick = () => { pendingUploadId = m.id; $('#fileInput').value = ''; $('#fileInput').click(); };
+      melonsEl.appendChild(row);
+      m._card = row;
+      if (m.result) requestAnimationFrame(() => drawSpectrum(row.querySelector('[data-canvas]'), m.result));
+    });
+    renderRanking();
+    renderLog();
+    save();
+  }
+
+  function editWeight(m, row){
+    const box = row.querySelector('[data-meta]');
+    box.innerHTML = `<div class="wedit"><input type="number" inputmode="decimal" step="0.1" min="0" value="${m.weight || ''}" aria-label="Weight"><select aria-label="Unit"><option value="lb"${m.unit === 'lb' ? ' selected' : ''}>lb</option><option value="kg"${m.unit === 'kg' ? ' selected' : ''}>kg</option></select><button type="button">Save</button></div>`;
+    const inp = box.querySelector('input'); inp.focus();
+    const commit = () => { const w = parseFloat(inp.value); m.weight = isFinite(w) && w > 0 ? w : null; m.unit = box.querySelector('select').value; render(); };
+    box.querySelector('button').onclick = commit;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
+  }
+
+  function rate(m, n){
+    m.rating = n;
+    if (!m.logId) m.logId = Date.now() + '-' + m.id;
+    const kg = massKg(m);
+    const entry = { id: m.logId, name: m.name, date: new Date().toISOString().slice(0, 10), freq: m.result.freq, decay: m.result.decay, kg, stiff: kg ? stiff(m.result.freq, kg) : null, rating: n };
+    tasteLog = tasteLog.filter(e => e.id !== m.logId).concat(entry);
+    store.set('thump.log', tasteLog);
+    render();
+  }
+
+  function sweetSpot(){
+    const loved = tasteLog.filter(e => e.stiff && e.rating >= 4);
+    if (loved.length < 3) return null;
+    const v = loved.map(e => e.stiff).sort((a, b) => a - b);
+    return { lo: v[0], hi: v[v.length - 1], mid: median(v), n: loved.length };
+  }
+
+  function renderLog(){
+    const el = $('#log');
+    if (!tasteLog.length) {
+      el.innerHTML = '<p class="hint">After you eat a melon you tested, rate it with the stars. Rate a few weighed melons 4 or 5 stars and Thump Test learns what your favorites sound like.</p>';
+      return;
+    }
+    const sw = sweetSpot();
+    const lovedSoFar = tasteLog.filter(e => e.stiff && e.rating >= 4).length;
+    const recent = tasteLog.slice().reverse().slice(0, 6);
+    el.innerHTML = `
+      ${sw
+        ? `<div class="sweet">Your favorites score between<b>${sw.lo.toFixed(0)} and ${sw.hi.toFixed(0)}</b><span class="small">Stiffness index, from ${sw.n} melons you rated 4+ stars. The verdict now points out which melon is closest.</span></div>`
+        : `<p class="hint">${tasteLog.length} rated so far. Rate ${3 - lovedSoFar} more weighed melon${3 - lovedSoFar === 1 ? '' : 's'} at 4+ stars to unlock your sweet spot.</p>`}
+      <ul>${recent.map(e => `<li><span>${esc(e.name)} <span class="small">${e.date}</span></span><span class="st">${'★'.repeat(e.rating)}${'☆'.repeat(5 - e.rating)}</span></li>`).join('')}</ul>
+      <p style="margin-top:10px"><button class="link" id="clearLog" type="button">${clearArmed ? 'Tap again to erase your taste log' : 'Clear taste log'}</button></p>`;
+    $('#clearLog').onclick = () => {
+      if (!clearArmed) { clearArmed = true; renderLog(); setTimeout(() => { clearArmed = false; renderLog(); }, 4000); return; }
+      clearArmed = false; tasteLog = []; store.set('thump.log', tasteLog);
+      melons.forEach(m => { m.rating = 0; m.logId = null; }); render();
+    };
+  }
+
+  $('#newTrip').onclick = () => {
+    nextId = 1; melons = [newMelon('Melon A', null, 'lb'), newMelon('Melon B', null, 'lb')]; render();
+    window.scrollTo({ top: $('#addForm').offsetTop - 20, behavior: 'smooth' });
+  };
+
+  function synthThumps(f, tau, sr){
+    const x = new Float32Array(sr * 4);
+    for (let t = 0; t < 4; t++) {
+      const s0 = Math.round((0.5 + t * 0.8) * sr);
+      for (let i = 0; i < sr * 0.3; i++) {
+        const tt = i / sr;
+        x[s0 + i] += Math.exp(-tt / tau) * Math.sin(2 * Math.PI * f * (1 + (t - 1.5) * 0.004) * tt) * 0.8 + 0.3 * Math.exp(-tt / 0.003) * (Math.random() - 0.5);
+      }
+    }
+    for (let i = 0; i < x.length; i++) x[i] += 0.004 * (Math.random() - 0.5);
+    return x;
+  }
+
+  $('#demoBtn').onclick = () => {
+    const sr = 44100;
+    [['Demo: dull thud', 118, 0.035, 13.0], ['Demo: deep and ringing', 132, 0.11, 12.6], ['Demo: bright ping', 176, 0.09, 11.8]].forEach(([name, f, tau, lb]) => {
+      const m = newMelon(name, lb, 'lb');
+      m.result = analyzeThumps(synthThumps(f, tau, sr), sr);
+      m.status = 'Demo reading from simulated knocks.';
+      m.demo = true;
+      melons.push(m);
+    });
+    melons = melons.filter(m => m.result || !/^Melon [A-Z]$/.test(m.name));
+    render();
+    $('#verdict').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  $('#fileInput').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    const m = melons.find(x => x.id === pendingUploadId);
+    if (!f || !m) return;
+    m.busy = true; m.status = 'Analyzing…'; m.warn = false; render();
+    try { await analyzeBuffer(m, await f.arrayBuffer()); }
+    catch(err){ fail(m, "Couldn't read that file. Try a voice memo, video, .m4a, .mp3 or .wav."); }
+  });
+
+  async function recordMic(m){
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch(err){
+      micAllowed = false; showMicNote();
+      m.status = 'Microphone is blocked here. Use Upload instead.'; m.warn = true; render();
+      return;
+    }
+    m.busy = true; m.status = 'Start knocking now, 3–5 times.'; m.warn = false; render();
+    const chunks = [];
+    const rec = new MediaRecorder(stream);
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const done = new Promise(res => rec.onstop = res);
+    rec.start();
+    let left = RECORD_SECONDS;
+    const tick = setInterval(() => { left--; if (left > 0) { m.status = `Keep knocking. ${left}s left.`; updateStatus(m); } }, 1000);
+    await new Promise(r => setTimeout(r, RECORD_SECONDS * 1000));
+    clearInterval(tick);
+    rec.stop(); await done;
+    stream.getTracks().forEach(t => t.stop());
+    m.status = 'Analyzing…'; updateStatus(m);
+    try { await analyzeBuffer(m, await new Blob(chunks, { type: rec.mimeType || 'audio/webm' }).arrayBuffer()); }
+    catch(err){ fail(m, "Couldn't process that recording. Try again, or use Upload."); }
+  }
+
+  function updateStatus(m){ const s = m._card && m._card.querySelector('.status'); if (s) s.textContent = m.status; }
+  function fail(m, msg){ m.busy = false; m.status = msg; m.warn = true; render(); }
+
+  // ---------- Analysis ----------
+  async function analyzeBuffer(m, arrayBuf){
+    const ctx = getCtx();
+    const audio = await new Promise((res, rej) => {
+      const p = ctx.decodeAudioData(arrayBuf, res, rej);
+      if (p && p.then) p.then(res, rej);
+    });
+    const sr = audio.sampleRate;
+    const n = audio.length;
+    const x = new Float32Array(n);
+    for (let c = 0; c < audio.numberOfChannels; c++) {
+      const d = audio.getChannelData(c);
+      for (let i = 0; i < n; i++) x[i] += d[i] / audio.numberOfChannels;
+    }
+    const res = analyzeThumps(x, sr);
+    m.busy = false;
+    if (!res) {
+      m.result = null;
+      m.status = "Didn't hear clear knocks. Knock harder, move the phone closer, or find a quieter spot.";
+      m.warn = true;
+    } else {
+      m.result = res;
+      const messy = res.thumps >= 3 && res.spread / res.freq > 0.12;
+      m.warn = res.quality < 3 || res.thumps < 2 || messy;
+      m.status = res.thumps < 2 ? 'Only heard one knock. Try again with 3–5 for a steadier reading.'
+        : messy ? "Your knocks didn't agree with each other. Knock the same spot the same way and try again."
+        : res.quality < 3 ? 'Noisy reading. Try again somewhere quieter.'
+        : `Got a clean reading from ${res.thumps} knocks.`;
+    }
+    render();
+  }
+
+  function analyzeThumps(x, sr){
+    // Energy envelope (5 ms hop, 10 ms frames)
+    const hop = Math.max(1, Math.round(sr * 0.005)), win = hop * 2;
+    const env = [];
+    for (let i = 0; i + win < x.length; i += hop) {
+      let s = 0; for (let j = 0; j < win; j++) { const v = x[i + j]; s += v * v; }
+      env.push(Math.sqrt(s / win));
+    }
+    if (env.length < 20) return null;
+    const sorted = env.slice().sort((a, b) => a - b);
+    const noise = sorted[Math.floor(sorted.length * 0.5)] || 1e-6;
+    const peakAll = sorted[sorted.length - 1];
+    const thr = Math.max(noise * 5, peakAll * 0.2);
+    if (peakAll < noise * 4) return null;
+
+    // Onsets
+    const minGap = Math.round(0.25 / 0.005);
+    const onsets = [];
+    for (let i = 1; i < env.length; i++) {
+      if (env[i] > thr && env[i - 1] <= thr) {
+        let pk = i;
+        for (let k = i; k < Math.min(env.length, i + 8); k++) if (env[k] > env[pk]) pk = k;
+        if (!onsets.length || pk - onsets[onsets.length - 1] > minGap) onsets.push(pk);
+      }
+    }
+    if (!onsets.length) return null;
+
+    const segLen = Math.round(sr * 0.18);
+    const N = 16384;
+    const freqs = [], decays = [], quals = [];
+    let specSum = null;
+
+    onsets.forEach((pk, idx) => {
+      const start = pk * hop;
+      const nextStart = idx + 1 < onsets.length ? onsets[idx + 1] * hop : x.length;
+      const L = Math.min(segLen, nextStart - start - Math.round(sr * 0.01), x.length - start);
+      if (L < sr * 0.04) return;
+
+      // Ring time: until envelope falls 20 dB below this thump's peak
+      const pkVal = env[pk];
+      let k = pk;
+      const limit = Math.min(env.length - 1, pk + Math.floor(L / hop));
+      while (k < limit && env[k] > pkVal * 0.1 && env[k] > noise * 1.5) k++;
+      decays.push((k - pk) * 0.005);
+
+      // Windowed FFT
+      const re = new Float64Array(N), im = new Float64Array(N);
+      for (let i = 0; i < L && i < N; i++) {
+        const w = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (L - 1));
+        re[i] = x[start + i] * w;
+      }
+      fft(re, im);
+      const binHz = sr / N;
+      const b0 = Math.floor(F_MIN / binHz), b1 = Math.ceil(F_MAX / binHz);
+      const mag = new Float64Array(b1 - b0 + 1);
+      let best = 0;
+      for (let b = b0; b <= b1; b++) {
+        mag[b - b0] = Math.hypot(re[b], im[b]);
+        if (mag[b - b0] > mag[best]) best = b - b0;
+      }
+      // Parabolic interpolation on log magnitude
+      let off = 0;
+      if (best > 0 && best < mag.length - 1) {
+        const a = Math.log(mag[best - 1] + 1e-12), bb = Math.log(mag[best] + 1e-12), c = Math.log(mag[best + 1] + 1e-12);
+        const den = a - 2 * bb + c; if (den !== 0) off = 0.5 * (a - c) / den;
+      }
+      const f = (b0 + best + off) * binHz;
+      const msorted = Array.from(mag).sort((p, q) => p - q);
+      const med = msorted[Math.floor(msorted.length / 2)] || 1e-12;
+      freqs.push(f); quals.push(mag[best] / med);
+
+      // Accumulate normalized spectrum for drawing
+      const mx = mag[best] || 1;
+      if (!specSum) specSum = new Float64Array(mag.length);
+      for (let i = 0; i < mag.length; i++) specSum[i] += mag[i] / mx;
+    });
+
+    if (!freqs.length) return null;
+    const binHz = sr / N;
+    return {
+      freq: median(freqs),
+      decay: median(decays),
+      quality: median(quals),
+      thumps: freqs.length,
+      spread: freqs.length > 1 ? (Math.max(...freqs) - Math.min(...freqs)) : 0,
+      spectrum: specSum ? Array.from(specSum, v => v / freqs.length) : [],
+      specF0: Math.floor(F_MIN / binHz) * binHz,
+      binHz
+    };
+  }
+
+  function median(a){ const s = a.slice().sort((p, q) => p - q); const h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; }
+
+  function fft(re, im){
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1;
+      for (; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2;
+          const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+          const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+        }
+      }
+    }
+  }
+
+  function drawSpectrum(cv, r){
+    if (!cv || !r.spectrum.length) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.clientWidth, H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const g = cv.getContext('2d'); g.scale(dpr, dpr);
+    const s = r.spectrum, mx = Math.max(...s) || 1;
+    const fx = f => (f - F_MIN) / (F_MAX - F_MIN) * W;
+    g.fillStyle = 'rgba(255,77,106,.22)'; g.strokeStyle = '#ff4d6a'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, H);
+    s.forEach((v, i) => g.lineTo(fx(r.specF0 + i * r.binHz), H - 6 - (v / mx) * (H - 18)));
+    g.lineTo(W, H); g.closePath(); g.fill(); g.stroke();
+    const px = fx(r.freq);
+    g.strokeStyle = '#123d24'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(px, 0); g.lineTo(px, H); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#557061'; g.font = '600 10px Figtree, sans-serif';
+    [100, 200, 300].forEach(f => g.fillText(f + ' Hz', fx(f) + 2, 11));
+  }
+
+  
+
+  function renderRanking(){
+    const tested = melons.filter(m => m.result);
+    const v = $('#verdict');
+    if (tested.length < 2) {
+      v.className = 'verdict empty';
+      v.innerHTML = tested.length ? 'Test one more melon and the verdict shows up here.' : 'Test two or more melons and the verdict shows up here.';
+      lastBest = null;
+      return;
+    }
+    const allWeighed = tested.every(m => massKg(m));
+    tested.forEach(m => { m._metric = allWeighed ? stiff(m.result.freq, massKg(m)) : m.result.freq; });
+    const medMetric = median(tested.map(m => m._metric));
+    const medDecay = median(tested.map(m => m.result.decay));
+    tested.forEach(m => {
+      const r = m._metric / medMetric;
+      m._over = tested.length >= 3 && r < 0.85 && m.result.decay < medDecay * 0.6;
+      m._label = m._over ? 'Maybe overripe' : r > 1.08 ? 'Sounds underripe' : r < 0.94 ? 'Sounds ripe' : 'In between';
+    });
+    const ranked = tested.slice().sort((a, b) => (a._over - b._over) || (a._metric - b._metric));
+    const best = ranked[0];
+    if (best._label === 'In between' || best._label === 'Sounds underripe') best._label = 'Ripest of these';
+
+    ranked.forEach((m, i) => {
+      if (!m._card) return;
+      m._card.classList.toggle('best', i === 0);
+      const t = m._card.querySelector('[data-tag]');
+      if (t) t.innerHTML = i === 0 ? '<span class="pill best">Best pick</span>' : (m._over ? '<span class="pill warn">Maybe overripe</span>' : '');
+    });
+
+    const sw = allWeighed ? sweetSpot() : null;
+    let matchLine = '';
+    if (sw) {
+      const near = tested.slice().sort((a, b) => Math.abs(a._metric - sw.mid) - Math.abs(b._metric - sw.mid))[0];
+      matchLine = near === best
+        ? '<p class="match">It\'s also the closest match to melons you\'ve loved.</p>'
+        : `<p class="match">Closest to melons you've loved: ${esc(near.name)}</p>`;
+    }
+    v.className = 'verdict';
+    v.innerHTML = `
+      <p class="lead">Take home</p>
+      <p class="pick">${esc(best.name)}</p>
+      ${matchLine}
+      <div class="flesh"><ol>${ranked.map((m, i) => `<li><span>${i + 1}. ${esc(m.name)}</span><span class="r">${m._label}</span></li>`).join('')}</ol>
+      <p class="foot">${allWeighed
+        ? 'Ranked by stiffness index, adjusted for size. Lower means softer, riper flesh.'
+        : 'Ranked by pitch alone. Add weights to every melon for a fairer comparison.'}${tested.length < 3 ? ' Test three or more to turn on the overripe check.' : ''}</p></div>`;
+
+    if (lastBest !== best.id) {
+      lastBest = best.id;
+      const s = $('#slice'); s.classList.remove('bounce'); void s.offsetWidth; s.classList.add('bounce');
+    }
+  }
+
+  const saved = store.get('thump.session', null);
+  if (saved && Array.isArray(saved.melons) && saved.melons.length) {
+    melons = saved.melons; nextId = saved.nextId || melons.length + 1;
+  } else {
+    melons.push(newMelon('Melon A', null, 'lb'));
+    melons.push(newMelon('Melon B', null, 'lb'));
+  }
+  render();
+})();
+</script>
+</body>
+</html>
